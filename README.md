@@ -258,8 +258,3 @@ build/
 *.truncated
 ```
 
-## Autor
-
-**Reemplazar con tu nombre completo**
-=======
->>>>>>> 08c8284220d59980c36a8b46a53e98c196081c24
