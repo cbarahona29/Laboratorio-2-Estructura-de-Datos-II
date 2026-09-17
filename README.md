@@ -1,119 +1,262 @@
-# Laboratorio 2: catálogo indexado y confiable
+# Catálogo musical indexado y confiable
 
-**Estudiante:** _Completar con el nombre antes de entregar._
+Laboratorio de **Estructura de Datos II** desarrollado en **C++20**. El proyecto
+implementa un catálogo musical almacenado en un archivo binario de registros de
+longitud variable, con índices para realizar búsquedas eficientes y validaciones
+para detectar datos dañados o referencias inconsistentes.
 
-Este proyecto implementa un catálogo musical binario de registros de longitud
-variable, un índice primario `label_id -> offset`, un índice secundario invertido
-`composer -> lista<label_id>` y una auditoría de consistencia. Cada lectura valida
-el encabezado, los límites, el CRC-32 y la estructura lógica del payload antes de
-entregar un registro.
+> **Estudiante:** Reemplazar con tu nombre completo  
+> **Curso:** Estructura de Datos II  
+> **Lenguaje:** C++20
 
-También se implementó el bono `intersect_sorted` mediante dos punteros.
+## Características
 
-## Compilar
+- Lectura segura de registros binarios mediante offsets.
+- Validación de magic, versión, longitud, truncamiento y CRC-32.
+- Índice primario ordenado: `label_id -> offset`.
+- Búsqueda binaria manual en `O(log n)`.
+- Índice secundario invertido: `composer -> lista<label_id>`.
+- Detección de claves y offsets duplicados.
+- Auditoría de consistencia entre el índice y el archivo de datos.
+- Intersección de listas ordenadas en `O(n + m)` como funcionalidad adicional.
+
+## Funcionamiento general
+
+```text
+catalog.psv
+    |
+    v
+catalog_generate
+    |
+    v
+catalog.bin
+    |
+    +--> Índice primario: label_id -> offset
+    |
+    +--> Índice secundario: composer -> lista<label_id>
+    |
+    +--> Verificación de integridad y consistencia
+```
+
+El archivo binario conserva el orden original de los registros. El índice
+primario se ordena de manera independiente por `label_id`, por lo que permite
+buscar rápidamente sin reorganizar los datos físicos.
+
+Cada registro contiene:
+
+```text
+magic | version | payload_length | payload | crc32
+```
+
+El payload almacena:
+
+```text
+label_id | composer | title
+```
+
+## Funciones principales
+
+| Función | Propósito |
+|---|---|
+| `read_record_at` | Lee y valida un registro desde un offset específico. |
+| `build_primary_index` | Construye y ordena el índice `label_id -> offset`. |
+| `find_offset` | Busca un `label_id` mediante búsqueda binaria manual. |
+| `find_record` | Busca una clave y recupera su registro validado. |
+| `build_composer_index` | Construye el índice `composer -> lista<label_id>`. |
+| `find_by_composer` | Busca las claves asociadas a un compositor. |
+| `verify_primary_index` | Audita la estructura del índice y sus referencias. |
+| `intersect_sorted` | Interseca dos listas ordenadas sin duplicados. |
+
+## Estructura del proyecto
+
+```text
+IndexedCatalog_Starter/
+|-- CMakeLists.txt
+|-- README.md
+|-- data/
+|   `-- catalog.psv
+|-- include/
+|   |-- binary_io.hpp
+|   |-- catalog.hpp
+|   |-- catalog_codec.hpp
+|   |-- crc32.hpp
+|   `-- index_io.hpp
+|-- src/
+|   |-- binary_io.cpp
+|   |-- catalog.cpp
+|   |-- catalog_codec.cpp
+|   |-- crc32.cpp
+|   |-- index_io.cpp
+|   `-- main.cpp
+|-- tests/
+|   |-- student_tests.cpp
+|   `-- tests.cpp
+|-- third_party/
+|   `-- doctest/
+`-- tools/
+    |-- corrupt_file.cpp
+    `-- generate_catalog.cpp
+```
+
+## Requisitos
+
+- CMake 3.20 o superior.
+- Compilador compatible con C++20.
+- Visual Studio 2022, GCC o Clang.
+
+## Compilación
+
+Desde la carpeta raíz del proyecto:
 
 ```bash
 cmake -S . -B build
 cmake --build build
 ```
 
-## Ejecutar pruebas
+En Windows con Visual Studio:
+
+```powershell
+cmake -S . -B build
+cmake --build build --config Debug
+```
+
+## Ejecución de pruebas
+
+En Linux o con un generador de una sola configuración:
 
 ```bash
 ctest --test-dir build --output-on-failure
 ```
 
-Con Visual Studio en Windows, indique además la configuración:
+En Windows con Visual Studio:
 
 ```powershell
 ctest --test-dir build -C Debug --output-on-failure
 ```
 
-O directamente (en un generador de una sola configuración):
+También puede ejecutarse directamente:
 
-```bash
-./build/catalog_tests
+```powershell
+.\build\Debug\catalog_tests.exe
 ```
 
-Con Visual Studio, el ejecutable equivalente es
-`build/Debug/catalog_tests.exe`.
+## Uso de la aplicación
 
-Para ejecutar un ejercicio específico:
+Los siguientes ejemplos usan las rutas generadas por Visual Studio en modo
+`Debug`. En Linux, normalmente los ejecutables se encuentran directamente en
+`build/`.
 
-```bash
-./build/catalog_tests --test-case="E04*"
+### 1. Generar el catálogo binario
+
+```powershell
+.\build\Debug\catalog_generate.exe data\catalog.psv data\catalog.bin
 ```
 
-## Generar datos de ejemplo
+### 2. Construir el índice primario
 
-```bash
-./build/catalog_generate data/catalog.psv data/catalog.bin
+```powershell
+.\build\Debug\lab2_catalog.exe build data\catalog.bin data\catalog.idx
 ```
 
-## Usar la aplicación
+### 3. Buscar por `label_id`
 
-```bash
-./build/lab2_catalog build data/catalog.bin data/catalog.idx
-./build/lab2_catalog find data/catalog.bin data/catalog.idx DG18807
-./build/lab2_catalog composer data/catalog.bin data/catalog.idx BEETHOVEN
-./build/lab2_catalog verify data/catalog.bin data/catalog.idx
+```powershell
+.\build\Debug\lab2_catalog.exe find data\catalog.bin data\catalog.idx DG18807
 ```
 
-## Simular corrupción
+Ejemplo de salida:
 
-```bash
-./build/catalog_corrupt flip data/catalog.bin data/catalog.corrupt 20
-./build/lab2_catalog verify data/catalog.corrupt data/catalog.idx
-
-./build/catalog_corrupt truncate data/catalog.bin data/catalog.truncated 3
-./build/lab2_catalog verify data/catalog.truncated data/catalog.idx
+```text
+DG18807 | BEETHOVEN | SYMPHONY NO. 9
 ```
 
-## Archivos que ya están completos
+### 4. Buscar por compositor
 
-- `src/binary_io.cpp`: I/O little-endian y utilidades de stream.
-- `src/crc32.cpp`: CRC-32/ISO-HDLC.
-- `src/catalog_codec.cpp`: codificación y decodificación del payload.
-- `src/index_io.cpp`: persistencia del índice primario.
-- `src/main.cpp`: interfaz de línea de comandos.
-- `tools/`: generación y corrupción controlada de datos.
+```powershell
+.\build\Debug\lab2_catalog.exe composer data\catalog.bin data\catalog.idx BEETHOVEN
+```
 
-## Complejidad
+### 5. Verificar la consistencia
 
-- `read_record_at`: O(p) tiempo y O(p) memoria, donde `p` es el tamaño del payload.
-- Construcción del índice primario: O(n log n) tiempo por el ordenamiento y O(n)
-  memoria, además del costo de leer los payloads.
-- Búsqueda primaria: O(log n) en memoria, seguida de un `seek` y la lectura validada
-  de un único registro.
-- Construcción del índice por compositor: O(n log n) tiempo y O(n) memoria.
-- Búsqueda por compositor: O(log c), donde `c` es la cantidad de compositores; el
-  resultado es un `span` sobre la lista ya almacenada.
-- Auditoría: O(n log n) por las copias ordenadas usadas para detectar duplicados,
-  más O(n) lecturas validadas.
-- Intersección opcional: O(n + m) tiempo y memoria proporcional al resultado.
+```powershell
+.\build\Debug\lab2_catalog.exe verify data\catalog.bin data\catalog.idx
+```
+
+Un catálogo consistente debe producir un resultado similar a:
+
+```text
+Entradas revisadas: 10
+Referencias legibles y coincidentes: 10
+Problemas: 0
+```
+
+## Simulación de corrupción
+
+La herramienta `catalog_corrupt` permite comprobar que las validaciones detectan
+archivos dañados.
+
+Invertir un bit:
+
+```powershell
+.\build\Debug\catalog_corrupt.exe flip data\catalog.bin data\catalog.corrupt 20
+.\build\Debug\lab2_catalog.exe verify data\catalog.corrupt data\catalog.idx
+```
+
+Truncar una copia del catálogo:
+
+```powershell
+.\build\Debug\catalog_corrupt.exe truncate data\catalog.bin data\catalog.corrupt 3
+.\build\Debug\lab2_catalog.exe verify data\catalog.corrupt data\catalog.idx
+```
 
 ## Integridad física y consistencia lógica
 
-La **integridad física** comprueba que los bytes estén completos y sin alteraciones;
-por ejemplo, detecta payloads truncados o un CRC-32 incorrecto. La **consistencia
-lógica** comprueba que esos bytes y sus referencias tengan sentido para el catálogo;
-por ejemplo, que el magic y la versión sean válidos, que las claves sean únicas y
-ordenadas, y que cada clave del índice coincida con el registro al que apunta. Un CRC
-válido no garantiza por sí solo que el índice apunte al registro correcto.
+La **integridad física** comprueba que los bytes estén completos y no hayan sido
+alterados. Algunos ejemplos son un payload truncado, un CRC ausente o un CRC que
+no coincide.
+
+La **consistencia lógica** comprueba que las estructuras y referencias tengan
+sentido para el catálogo. Algunos ejemplos son claves duplicadas, un índice
+desordenado, offsets repetidos o una clave del índice que no coincide con el
+registro recuperado.
+
+Un CRC válido demuestra que el payload no cambió, pero no garantiza que el índice
+apunte al registro correcto.
+
+## Complejidades
+
+| Operación | Complejidad |
+|---|---|
+| Lectura de un registro | `O(p)`, donde `p` es el tamaño del payload |
+| Construcción del índice primario | `O(n log n)` |
+| Búsqueda primaria | `O(log n)` más la lectura de un registro |
+| Construcción del índice por compositor | `O(n log n)` |
+| Búsqueda por compositor | `O(log c)` |
+| Auditoría del índice | `O(n log n)` más las lecturas |
+| Intersección de listas ordenadas | `O(n + m)` |
 
 ## Pruebas adicionales
 
-`tests/student_tests.cpp` incluye casos para:
+Las pruebas de `tests/student_tests.cpp` incluyen:
 
-- archivo vacío;
-- header truncado y la invariante de no entregar un registro inválido;
-- referencia secundaria cuya clave no coincide;
-- duplicados presentes en un índice desordenado;
-- intersección ordenada con entradas duplicadas.
+- Construcción del índice desde un archivo vacío.
+- Detección de un header truncado.
+- Omisión de una referencia cuya clave no coincide.
+- Detección simultánea de índice desordenado, clave duplicada y offset duplicado.
+- Intersección ordenada sin valores repetidos.
 
-## Antes de entregar
+## Archivos que no deben subirse
 
-- Reemplazar el campo de nombre al inicio de este archivo.
-- Ejecutar todas las pruebas con `ctest --test-dir build --output-on-failure`.
+Antes de entregar o publicar, se recomienda excluir:
 
-No entregue `build/`, ejecutables ni archivos generados `.bin`, `.idx` o `.corrupt`.
+```text
+build/
+*.bin
+*.idx
+*.corrupt
+*.truncated
+```
+
+## Autor
+
+**Reemplazar con tu nombre completo**
