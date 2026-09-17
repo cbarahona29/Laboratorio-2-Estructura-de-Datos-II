@@ -245,6 +245,7 @@ Las pruebas de `tests/student_tests.cpp` incluyen:
 - Detección simultánea de índice desordenado, clave duplicada y offset duplicado.
 - Intersección ordenada sin valores repetidos.
 
+<<<<<<< HEAD
 ## Archivos que no deben subirse
 
 Antes de entregar o publicar, se recomienda excluir:
@@ -260,3 +261,5 @@ build/
 ## Autor
 
 **Reemplazar con tu nombre completo**
+=======
+>>>>>>> 08c8284220d59980c36a8b46a53e98c196081c24
