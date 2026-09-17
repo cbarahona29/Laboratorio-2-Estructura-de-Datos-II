@@ -111,9 +111,3 @@ válido no garantiza por sí solo que el índice apunte al registro correcto.
 - duplicados presentes en un índice desordenado;
 - intersección ordenada con entradas duplicadas.
 
-## Antes de entregar
-
-- Reemplazar el campo de nombre al inicio de este archivo.
-- Ejecutar todas las pruebas con `ctest --test-dir build --output-on-failure`.
-
-No entregue `build/`, ejecutables ni archivos generados `.bin`, `.idx` o `.corrupt`.
